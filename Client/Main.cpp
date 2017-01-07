@@ -14,7 +14,7 @@ void printInfo();
 // Wyświetlanie informacji przy wyborze serwisu dla wydania biletu.
 void printServiceChoiceInfo();
 // Operacja wyydawania biletów
-void releaseTicket(int socket, struct sockaddr_in);
+void releaseTicket(int socket, struct sockaddr_in server_address);
 // Wywołanie serwisu UDP ECHO
 void udpEcho(int socket, struct sockaddr_in);
 // Wywołanie serwisu UDP TIME
@@ -111,7 +111,7 @@ void printServiceChoiceInfo(){
 	std::cout<<" 3) TCP ECHO."<<std::endl;
 }
 
-void releaseTicket(int socket, struct sockaddr_in){
+void releaseTicket(int socket, struct sockaddr_in server_address){
 	printServiceChoiceInfo();
 	int choice;
 	std::cin>>choice;
@@ -124,6 +124,7 @@ void releaseTicket(int socket, struct sockaddr_in){
 			break;
 		case 3:
 			std::cout<<"Wybrano TCP ECHO"<<std::endl;
+		
 			break;
 		default:
 			std::cout<<"Niepoprawny numer usługi!"<<std::endl;
@@ -132,13 +133,11 @@ void releaseTicket(int socket, struct sockaddr_in){
 }
 
 void udpEcho(int socket, struct sockaddr_in){
-	
+	 
 }
 
 void udpTime(int socket, struct sockaddr_in){
 	
 }
 
-void tcpEcho(int socket, struct sockaddr_in){
-	
-}
+
