@@ -21,21 +21,23 @@
 
 void serverLoop(int udpSocket, int tcpSocket){
 	
-	fd_set fds;
+	
 	
 	std::set <int> clientFDs;
 	
 	while(1){
 		// zeruj zbiór deskryptorach
+		fd_set fds;
 		FD_ZERO(&fds);
 		// dodanie deskryptorów
-		FD_SET(udpSocket, &fds);
 		FD_SET(tcpSocket, &fds);
+		FD_SET(udpSocket, &fds);
+	
 		
 		int max = std::max(udpSocket,tcpSocket);
 		for (auto fd : clientFDs) {
-			max = std::max(fd, max);
 			FD_SET (fd, &fds);
+			max = std::max(fd, max);
 		}
 		
 		int nfds = select(max+1, &fds, nullptr, nullptr, nullptr);
@@ -68,14 +70,19 @@ void serverLoop(int udpSocket, int tcpSocket){
 		}
 		
 		for(auto fd : clientFDs){
-			if(!FD_ISSET(fd,&fds)){
+			if(!FD_ISSET(fd,&fds))
 				continue;
-			}
 			
 			char buf[4096];
 			int numBytes = recv(fd,buf,sizeof(buf),0);
-			std::cout<<"TCP_RECEIVE"<<std::endl;
-			std::cout<<buf<<std::endl;
+			if(numBytes > 0){
+				std::cout<<"TCP_RECEIVE"<<std::endl;
+				std::cout<<buf<<std::endl;
+			}else{
+				close(fd);
+				clientFDs.erase(fd);
+			}
+			
 		}
 	}
 }

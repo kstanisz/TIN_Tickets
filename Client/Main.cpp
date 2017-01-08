@@ -13,14 +13,16 @@
 void printInfo();
 // Wyświetlanie informacji przy wyborze serwisu dla wydania biletu.
 void printServiceChoiceInfo();
-// Operacja wyydawania biletów
-void releaseTicket(int socket, struct sockaddr_in);
+// Operacja wydawania biletów
+void releaseTicket(int socket, struct sockaddr_in server_address);
 // Wywołanie serwisu UDP ECHO
-void udpEcho(int socket, struct sockaddr_in);
+void udpEcho(int socket, struct sockaddr_in server_address);
 // Wywołanie serwisu UDP TIME
-void udpTime(int socket, struct sockaddr_in);
+void udpTime(int socket, struct sockaddr_in server_address);
 // Wywołanie serwisu TCP ECHO
-void tcpEcho(int socket, struct sockaddr_in);
+void tcpEcho(int socket, struct sockaddr_in server_address);
+// Wyslanie danych serverowi potrzebnych do wydania biletu
+void sendTicketRequest(int socket, struct sockaddr_in server_address, int number_of_service);
 
 
 int main(){
@@ -29,60 +31,61 @@ int main(){
 
 	int tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if(tcp_sock == -1){
-		std::cout<<"Nie udało się utworzyć tcp_socekt."<<std::endl;
+		printf("Nie udało się utworzyć tcp_socekt.\n");
 		exit(1);
 	}
 	
 	int udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (udp_sock == -1) {
-		std::cout<<"Nie udało się utworzyć udp_socket."<<std::endl;
+		printf("Nie udało się utworzyć udp_socket.\n");
 		exit(1);
 	}
 
 	// ADRESY SOCKETÓW SERWEROWYCH
 	
-	struct sockaddr_in udp_release_ticket_server_address;
-	udp_release_ticket_server_address.sin_family = AF_INET;
-	udp_release_ticket_server_address.sin_addr.s_addr = INADDR_ANY;
-	udp_release_ticket_server_address.sin_port = htons(9001);
-
-	struct sockaddr_in udp_echo_server_address;
-	udp_echo_server_address.sin_family = AF_INET;
-	udp_echo_server_address.sin_addr.s_addr = INADDR_ANY;
-	udp_echo_server_address.sin_port = htons(9002);
+	struct sockaddr_in udp_server_address;
+	udp_server_address.sin_family = AF_INET;
+	udp_server_address.sin_addr.s_addr = INADDR_ANY;
+	udp_server_address.sin_port = htons(9001);
 	
-	struct sockaddr_in udp_time_server_address;
-	udp_time_server_address.sin_family = AF_INET;
-	udp_time_server_address.sin_addr.s_addr = INADDR_ANY;
-	udp_time_server_address.sin_port = htons(9003);
 		
 	struct sockaddr_in tcp_echo_server_address;
 	tcp_echo_server_address.sin_family = AF_INET;
 	tcp_echo_server_address.sin_addr.s_addr = INADDR_ANY;
-	tcp_echo_server_address.sin_port = htons(9004);
+	tcp_echo_server_address.sin_port = htons(9002);
 
 	// USER INTERFACE
-	int x;
+	int connection = connect(tcp_sock, (struct sockaddr*) &tcp_echo_server_address, sizeof(tcp_echo_server_address));
+    if(connection ==-1){
+      	perror("Connect server error");
+      	exit(1);
+    };
+
 	printInfo();
-	while(std::cin>>x){
+	
+	while(1){
+		int x;
+		printf("\n");
+		scanf("%d", &x);
+	
 		switch(x){
 			case 0:
-				std::cout<<"Koniec działania programu"<<std::endl;
+				printf("Koniec działania programu\n");
 				break;
 			case 1:
-				releaseTicket(udp_sock, udp_release_ticket_server_address);
+				releaseTicket(udp_sock, udp_server_address);
 				break;
 			case 2:
-				udpEcho(udp_sock, udp_echo_server_address);
+				udpEcho(udp_sock, udp_server_address);
 				break;
 			case 3:
-				udpTime(udp_sock, udp_time_server_address);
+				udpTime(udp_sock, udp_server_address);
 				break;
 			case 4:
 				tcpEcho(tcp_sock, tcp_echo_server_address);
 				break;
 			default:
-				std::cout<<"Niepoprawny wybór!."<<std::endl;
+				printf("Niepoprawny wybór!.\n");
 		}
 		
 		if(x==0){
@@ -96,49 +99,44 @@ int main(){
 }
 
 void printInfo(){
-	std::cout<<"<---TICKETS_CLIENT--->"<<std::endl;
-	std::cout<<" 1) Wydaj bilet na usługę."<<std::endl;
-	std::cout<<" 2) Wykonaj usługę UDP echo."<<std::endl;
-	std::cout<<" 3) Wykonaj usługę TCP echo."<<std::endl;
-	std::cout<<" 4) Wykonaj usługę UDP czas."<<std::endl;
-	std::cout<<" 0) Zakończ program."<<std::endl;
+	printf("<---TICKETS_CLIENT--->\n"
+	" 1) Wydaj bilet na usługę.\n"
+	" 2) Wykonaj usługę UDP echo.\n"
+	" 3) Wykonaj usługę UDP czas.\n"
+	" 4) Wykonaj usługę TCP echo.\n"
+	" 0) Zakończ program.\n");
 }
 
 void printServiceChoiceInfo(){
-	std::cout<<"<---WYBIERZ USŁUGĘ--->"<<std::endl;
-	std::cout<<" 1) UDP ECHO."<<std::endl;
-	std::cout<<" 2) UDP CZAS."<<std::endl;
-	std::cout<<" 3) TCP ECHO."<<std::endl;
+	printf("<---WYBIERZ USŁUGĘ--->\n"
+	" 1) UDP ECHO.\n"
+	" 2) UDP CZAS.\n"
+	" 3) TCP ECHO.\n");
 }
 
-void releaseTicket(int socket, struct sockaddr_in){
+void releaseTicket(int socket, struct sockaddr_in server_address){
 	printServiceChoiceInfo();
 	int choice;
-	std::cin>>choice;
+	scanf("%d", &choice);
 	switch(choice){
 		case 1:
-			std::cout<<"Wybrano UDP ECHO"<<std::endl;
+			printf("Wybrano UDP ECHO\n");
+			sendTicketRequest(socket, server_address, 1);
 			break;
 		case 2:
-			std::cout<<"Wybrano UDP CZAS"<<std::endl;
+			printf("Wybrano UDP CZAS\n");
+			sendTicketRequest(socket, server_address, 2);
 			break;
 		case 3:
-			std::cout<<"Wybrano TCP ECHO"<<std::endl;
+			printf("Wybrano TCP ECHO\n");
+			sendTicketRequest(socket, server_address, 3);
 			break;
 		default:
-			std::cout<<"Niepoprawny numer usługi!"<<std::endl;
+			printf("Niepoprawny numer usługi!\n");
 			break;
 	}
 }
 
-void udpEcho(int socket, struct sockaddr_in){
-	
-}
 
-void udpTime(int socket, struct sockaddr_in){
-	
-}
 
-void tcpEcho(int socket, struct sockaddr_in){
-	
-}
+
