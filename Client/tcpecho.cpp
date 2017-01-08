@@ -41,10 +41,8 @@ void tcpEcho(int socket, struct sockaddr_in server_address){
 
 	char * message = new char[ all_details.size() + 1 ];
 	strcpy( message, all_details.c_str() );
-	
 
-
-  	if(write(sock, message, sizeof(message))==-1)
+  	if(write(sock, message, 1024)==-1)
       		perror("writing server");
   	else {	
         
@@ -53,6 +51,21 @@ void tcpEcho(int socket, struct sockaddr_in server_address){
 	}
 
 	delete[] message;
+	char message_from_server[50];
+	int read_result;
+	do {
+
+	read_result= read(  sock,   &message_from_server, sizeof(message_from_server));
+		printf("%d", read_result);
+	 
+	if(read_result>0)
+		{
+			printf("to jest info od klienta: %s\n", message_from_server);
+			read_result= 0;
+		}
+	}
+	while(read_result!=0);
+
 }
 
 
