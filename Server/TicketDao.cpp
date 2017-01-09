@@ -59,8 +59,13 @@ bool TicketDao::checkTicket(std::string ip, std::string serviceName)
 	return(mysql_fetch_row(queryId) != NULL);
 }
 
-void TicketDao::releaseTicket(std::string ip, std::string password, std::string serviceName)
+Ticket* TicketDao::releaseTicket(std::string ip, std::string password, std::string serviceName)
 {
+	
+	Ticket* ticket = new Ticket();
+	ticket->ip = ip;
+	ticket->serviceName = serviceName;
+	
 	int checksum = 0;
 	
 	//TODO: checksum, expiry_date
@@ -84,5 +89,6 @@ void TicketDao::releaseTicket(std::string ip, std::string password, std::string 
 
 		}
 	}
-	// return ticket
+	
+	return ticket;
 }

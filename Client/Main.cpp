@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdio.h>
-#include <set>
+#include <vector>
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
@@ -26,11 +26,14 @@ void udpTime(int socket, struct sockaddr_in server_address, Ticket* ticket);
 void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket);
 // Wyslanie danych serverowi potrzebnych do wydania biletu
 Ticket* sendTicketRequest(int socket, struct sockaddr_in server_address, std::string serviceName);
+// Dodanie biletu
+void addTicket(Ticket* ticket, std::vector<Ticket>* tickets);
 // Metoda sprawdzająca czy posiadany jest ważny bilet na usługę
-Ticket* getTicket(std::set<Ticket> tickets, std::string serviceName);
+Ticket* getTicket(std::vector<Ticket>* tickets, std::string serviceName);
 
 
-int main(){
+int main()
+{
 
 	// UTWORZENIE SOCKETÓW
 
@@ -65,10 +68,9 @@ int main(){
       	perror("Connect server error");
       	exit(1);
     };
-
 	
 	// BILETY
-	std::set<Ticket> tickets;
+	std::vector<Ticket> tickets;
 	printInfo();
 	
 	while(1){
@@ -84,35 +86,35 @@ int main(){
 			case 1:{
 				Ticket* ticket = releaseTicket(udp_sock, udp_server_address);
 				if(ticket != nullptr){
-					tickets.insert(*ticket);
+					addTicket(ticket, &tickets);
 				}
 				break;
 			}
 			case 2:{
-				Ticket* ticket = getTicket(tickets,"UDP_ECHO");
-				if(ticket!=nullptr || true){
+				Ticket* ticket = getTicket(&tickets,"UDP_ECHO");
+				if(ticket!=nullptr){
 					udpEcho(udp_sock, udp_server_address,ticket);
 				}else{
-					std::cout<<"Brak ważnego biletu na usługę UDP ECHO"<<std::endl;	
+					std::cout<<"Brak biletu na usługę UDP ECHO"<<std::endl;	
 				}
 				break;
 			}
 			case 3:{
-				Ticket* ticket = getTicket(tickets,"UDP_TIME");
-				if(ticket!=nullptr || true){
+				Ticket* ticket = getTicket(&tickets,"UDP_TIME");
+				if(ticket!=nullptr){
 					udpTime(udp_sock, udp_server_address,ticket);
 				}else{
-					std::cout<<"Brak ważnego biletu na usługę UDP TIME"<<std::endl;	
+					std::cout<<"Brak biletu na usługę UDP TIME"<<std::endl;	
 				}
 				break;
 			}
 		
 			case 4:{
-				Ticket* ticket = getTicket(tickets,"TCP_ECHO");
-				if(ticket != nullptr || true){
+				Ticket* ticket = getTicket(&tickets,"TCP_ECHO");
+				if(ticket != nullptr){
 					tcpEcho(tcp_sock, tcp_echo_server_address,ticket);
 				}else{
-					std::cout<<"Brak ważnego biletu na usługę TCP ECHO"<<std::endl;	
+					std::cout<<"Brak biletu na usługę TCP ECHO"<<std::endl;	
 				}
 				break;
 			}
@@ -172,12 +174,30 @@ Ticket* releaseTicket(int socket, struct sockaddr_in server_address){
 	}
 }
 
-Ticket* getTicket(std::set<Ticket> tickets, std::string serviceName)
+void addTicket(Ticket* ticket, std::vector<Ticket>* tickets)
 {
-	for(auto ticket : tickets){
-		// and expiry_date <= sysdate
-		if(ticket.serviceName == serviceName){
-			return nullptr;
+	std::cout<<"Dodaję bilet: "<<std::endl;
+	
+	for(int i=0;i<tickets->size();i++){
+		if((*tickets)[i].serviceName == ticket->serviceName){
+			(*tickets)[i] = (*ticket);
+			return;
+		}
+	}
+	
+
+	tickets->push_back((*ticket));
+	std::cout<<"Aktualnie bilety: "<<std::endl;
+	for(int i=0;i<tickets->size();i++){
+		std::cout<<(*tickets)[i].serviceName<<std::endl;
+	}
+}
+
+Ticket* getTicket(std::vector<Ticket>* tickets, std::string serviceName)
+{
+	for(int i=0;i<tickets->size();i++){
+		if((*tickets)[i].serviceName == serviceName){
+			return &((*tickets)[i]);
 		}
 	}
 	

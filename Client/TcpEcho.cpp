@@ -12,17 +12,16 @@
 #include "DataStructures.h"
 void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 
-
-	Request* request =  new Request(false,"","","TCP_ECHO","HELLO_WORLD!");
+	std::string echoMsg;	
+	printf("Podaj wiadomość:\n");
+	std::cin>>echoMsg; 
+	printf("\n");
+	
+	Request* request =  new Request(false,"127.0.0.1","","TCP_ECHO",echoMsg);
 	const char* message = request->serialize().c_str();
 	
   	if(write(socket, message, strlen(message))==-1)
-      		perror("writing server");
-  	else {	
-        
-          printf("You successfully sent a message.\n");
-         
-	}
+      	perror("writing server");
 
 	char message_from_server[4096];
 	int read_result;
@@ -32,7 +31,7 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	 
 		if(read_result>0)
 		{
-			printf("to jest info od klienta: %s\n", message_from_server);
+			printf("\nOdpowiedź serwera: %s\n", message_from_server);
 			read_result= 0;
 		}
 	}

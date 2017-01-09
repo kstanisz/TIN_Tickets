@@ -15,7 +15,12 @@ using json = nlohmann::json;
 
 void udpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	
-	Request* request =  new Request(false,"","","UDP_ECHO","HELLO_WORLD!");
+	std::string echoMsg;	
+	printf("Podaj wiadomość:\n");
+	std::cin>>echoMsg; 
+	printf("\n");
+	
+	Request* request =  new Request(false,"127.0.0.1","","UDP_ECHO",echoMsg);
 	const char* message = request->serialize().c_str();
 	
 	if(sendto(socket, message, strlen(message), 0, (struct sockaddr *) &server_address, sizeof(server_address) ) == -1)			
@@ -25,7 +30,7 @@ void udpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	int read_result;
 	do {
 
-		read_result= read(socket,&message_from_server, sizeof(message_from_server));
+		read_result= recv(socket,&message_from_server, sizeof(message_from_server),0);
 	 
 		if(read_result>0)
 		{

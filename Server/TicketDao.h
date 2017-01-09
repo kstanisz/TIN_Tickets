@@ -3,6 +3,8 @@
 #include <string>
 #include <mysql.h>
 
+#include "DataStructures.h"
+
 class TicketDao
 {
 	private:
@@ -16,6 +18,6 @@ class TicketDao
 		
 		bool checkAccess(std::string ip, std::string password, std::string serviceName);
 		bool checkTicket(std::string ip, std::string serviceName);
-		void releaseTicket(std::string ip, std::string password, std::string serviceName);
+		Ticket* releaseTicket(std::string ip, std::string password, std::string serviceName);
 };
 

@@ -43,6 +43,11 @@ class Request
 			return releaseTicket;
 		}
 		
+		void setIp(std::string ip)
+		{
+			this->ip=ip;
+		}
+		
 		std::string getIp(){
 			return ip;
 		}
@@ -85,21 +90,31 @@ class Response
 {
 	private:
 		std::string message;
-		Ticket ticket;
+		std::string ip;
+		std::string serviceName;
 	public:
 		Response(std::string message,Ticket* ticket){
 			this->message = message;
-			this->ticket = (*ticket);
+			this->ip = ticket->ip;
+			this->serviceName = ticket->serviceName;
 		}
 		
 		std::string getMessage(){
 			return message;
 		}
 		
+		Ticket* getTicket(){
+			Ticket* ticket =  new Ticket();
+			ticket->ip = ip;
+			ticket->serviceName = serviceName;
+			return ticket;
+		}
+		
 		std::string serialize(){
 			json j;
 			j["message"] = message;
-			j["ticket"] = {{"ip",ticket.ip},{"serviceName",ticket.serviceName}};
+			j["ip"] = ip;
+			j["serviceName"] = serviceName;
 			
 			return j.dump();
 		}
@@ -107,8 +122,8 @@ class Response
 		static Response* deserialize(json j){
 			std::string message = j["message"];
 			Ticket ticket = Ticket();
-			ticket.ip = "test";
-			ticket.serviceName = "test2";
+			ticket.ip = j["ip"];
+			ticket.serviceName = j["serviceName"];
 			
 			return new Response(message,&ticket);
 		}
