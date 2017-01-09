@@ -8,7 +8,9 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-void udpTime(int socket, struct sockaddr_in server_address){
+#include "DataStructures.h"
+
+void udpTime(int socket, struct sockaddr_in server_address, Ticket* ticket){
 
 	int sock;
 	sock = socket;

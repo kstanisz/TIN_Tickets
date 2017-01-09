@@ -15,81 +15,21 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-
+#include "json.hpp"
+#include "DataStructures.h"
 #include"TicketDao.h"
 
+using json = nlohmann::json;
 
-void serverLoop(int udpSocket, int tcpSocket){
-	
-	
-	
-	std::set <int> clientFDs;
-	
-	while(1){
-		// zeruj zbiór deskryptorach
-		fd_set fds;
-		FD_ZERO(&fds);
-		// dodanie deskryptorów
-		FD_SET(tcpSocket, &fds);
-		FD_SET(udpSocket, &fds);
-	
-		
-		int max = std::max(udpSocket,tcpSocket);
-		for (auto fd : clientFDs) {
-			FD_SET (fd, &fds);
-			max = std::max(fd, max);
-		}
-		
-		int nfds = select(max+1, &fds, nullptr, nullptr, nullptr);
-		if(nfds == -1){
-			perror("select() error");
-		}
-			
-		if(nfds == 0){
-			// handle timeout
-		}
-		
-		if(FD_ISSET(tcpSocket,&fds)){
-			struct sockaddr address;
-			socklen_t addressSize = sizeof(address);
-			int newFd = accept(tcpSocket,&address,&addressSize);
-			if(newFd == -1){
-				perror("Tcp accept()");
-				continue;
-			}
-			
-			clientFDs.insert(newFd);
-		}
-		
-		if(FD_ISSET(udpSocket,&fds)){
-			char buf[4096];
-			int numBytes = recv(udpSocket,buf,sizeof(buf),0);
-			
-			std::cout<<"UDP_RECEIVE"<<std::endl;
-			std::cout<<buf<<std::endl;
-		}
-		
-		for(auto fd : clientFDs){
-			if(!FD_ISSET(fd,&fds))
-				continue;
-			
-			char buf[4096];
-			int numBytes = recv(fd,buf,sizeof(buf),0);
-			if(numBytes > 0){
-				std::cout<<"TCP_RECEIVE"<<std::endl;
-				std::cout<<buf<<std::endl;
-			}else{
-				close(fd);
-				clientFDs.erase(fd);
-			}
-			
-		}
-	}
-}
-
+void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao);
+Response* releaseTicket(Request* request, TicketDao* ticketDao);
+Response* runUdpService(Request* request, TicketDao* ticketDao);
+Response* runTcpService(Request* request, TicketDao* ticketDao);
 
 int main(){
 	
+	TicketDao* ticketDao = new TicketDao();
+	ticketDao->connect();
 	// Utworzenie socketów i ich adresów oraz bind.
 	
 	const int udpSocket = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
@@ -129,7 +69,144 @@ int main(){
 	
 	listen(tcpSocket,999);
 	
-	serverLoop(udpSocket,tcpSocket);
+	serverLoop(udpSocket,tcpSocket,ticketDao);
+	
+	ticketDao->disconnect();
+	delete ticketDao;
 	
 	return 0;
+}
+
+void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
+	
+	std::set <int> clientFDs;
+	
+	while(1){
+		
+		// zeruj zbiór deskryptorach
+		fd_set fds;
+		FD_ZERO(&fds);
+		// dodanie deskryptorów
+		FD_SET(tcpSocket, &fds);
+		FD_SET(udpSocket, &fds);
+	
+		
+		int max = std::max(udpSocket,tcpSocket);
+		for (auto fd : clientFDs) {
+			FD_SET (fd, &fds);
+			max = std::max(fd, max);
+		}
+		
+		int nfds = select(max+1, &fds, nullptr, nullptr, nullptr);
+		if(nfds == -1){
+			perror("select() error");
+		}
+			
+		if(nfds == 0){
+			// handle timeout
+		}
+		
+		if(FD_ISSET(tcpSocket,&fds)){
+			struct sockaddr address;
+			socklen_t addressSize = sizeof(address);
+			int newFd = accept(tcpSocket,&address,&addressSize);
+			if(newFd == -1){
+				perror("Tcp accept()");
+				continue;
+			}
+			
+			clientFDs.insert(newFd);
+		}
+		
+		if(FD_ISSET(udpSocket,&fds)){
+			char buf[4096];
+			sockaddr_in from;
+			socklen_t fromSize = sizeof from;
+			int numBytes = recvfrom(udpSocket,buf,sizeof(buf),0,(sockaddr*) &from, &fromSize);
+			
+			json j;
+			std::string message = buf;
+			try{
+				j = json::parse(message);
+			}catch(std::exception e){
+				//std::cout<<"Error parsing json."<<std::endl;
+			}
+			
+			Request* request;
+			
+			try{
+				request = Request::deserialize(j);
+			}catch(std::exception e){
+				//std::cout<<"Error deserializing json."<<std::endl;
+			}
+			
+			Response * response;
+			if(request->isReleaseTicket()){
+				response = releaseTicket(request,ticketDao);
+			}else{
+				response = runUdpService(request,ticketDao);
+			}
+						
+			sendto(udpSocket,response->getMessage().c_str(),response->getMessage().size(),0,(sockaddr* ) &from , sizeof from);
+			
+		}
+		
+		for(auto fd : clientFDs){
+			if(!FD_ISSET(fd,&fds))
+				continue;
+					
+			char buf[4096];
+			int numBytes = read(fd,buf,sizeof(buf));
+			if(numBytes > 0){
+				std::cout<<"TCP_RECEIVE"<<std::endl;
+				std::cout<<buf<<std::endl;
+			}else{
+				close(fd);
+				clientFDs.erase(fd);
+			}
+		}
+	}
+}
+
+Response* releaseTicket(Request* request, TicketDao* ticketDao)
+{
+	std::cout<<"Serwer wykonuje wydanie biletu"<<std::endl;
+}
+
+Response* runUdpService(Request* request, TicketDao* ticketDao)
+{
+	std::string serviceName = request->getServiceName();
+	std::cout<<"Serwer wykonuje usługę: "+serviceName<<std::endl;
+	Ticket dummy = Ticket();
+	bool ticketValid = ticketDao->checkTicket(request->getIp(),request->getPassword());
+	if(!ticketValid){
+		return new Response("Bilet nieważny!",&dummy);
+	}
+	
+	if(serviceName == "UDP_ECHO"){
+		return new Response(request->getMessage(),&dummy);
+	}else if(serviceName == "UDP_TIME"){
+		return new Response(request->getMessage(),&dummy);
+	}else{
+		std::cout<<"Niepoprawna nazwa usługi"<<std::endl;
+	}
+}
+
+Response* runTcpService(Request* request, TicketDao* ticketDao)
+{
+	std::string serviceName = request->getServiceName();
+	std::cout<<"Serwer wykonuje usługę: "+serviceName<<std::endl;
+	Ticket dummy = Ticket();
+	
+	bool ticketValid = ticketDao->checkTicket(request->getIp(),request->getPassword());
+	if(!ticketValid){
+		return new Response("Bilet nieważny!",&dummy);
+	}
+	
+	
+	if(serviceName == "TCP_ECHO"){
+		return new Response(request->getMessage(),&dummy);
+	}else{
+		std::cout<<"Niepoprawna nazwa usługi"<<std::endl;
+	}
 }

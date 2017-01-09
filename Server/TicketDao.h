@@ -15,7 +15,7 @@ class TicketDao
 		void disconnect();
 		
 		bool checkAccess(std::string ip, std::string password, std::string serviceName);
-		bool checkTicket(std::string ip, std::string password, std::string serviceName);
+		bool checkTicket(std::string ip, std::string serviceName);
 		void releaseTicket(std::string ip, std::string password, std::string serviceName);
 };
 

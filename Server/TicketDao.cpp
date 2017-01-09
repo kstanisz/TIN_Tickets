@@ -41,7 +41,7 @@ bool TicketDao::checkAccess(std::string ip, std::string password, std::string se
 	return(mysql_fetch_row(queryId) != NULL);
 }
 
-bool TicketDao::checkTicket(std::string ip, std::string password, std::string serviceName)
+bool TicketDao::checkTicket(std::string ip, std::string serviceName)
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
@@ -49,7 +49,6 @@ bool TicketDao::checkTicket(std::string ip, std::string password, std::string se
 						"LEFT JOIN USER U ON U.id = T.user_id " <<
 						"LEFT JOIN SERVICE S ON S.id = T.service_id " <<
 						"WHERE U.ip='"<<ip<<"' "<<
-						"AND U.password='"<<password<<"' "<<
 						"AND S.name='"<<serviceName<<"' "<<
 						"AND T.expiry_date > sysdate()";
 						
@@ -66,7 +65,7 @@ void TicketDao::releaseTicket(std::string ip, std::string password, std::string 
 	
 	//TODO: checksum, expiry_date
 	
-	if(checkTicket(ip,password,serviceName)){
+	if(checkTicket(ip,serviceName)){
 		std::stringstream query;
 		// TODO: query
 		query << "UPDATE TICKET SET EXPIRY_DATE = '2017-7-08' ";

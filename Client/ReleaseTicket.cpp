@@ -8,21 +8,19 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-void sendTicketRequest(int socket, struct sockaddr_in server_address, int number_of_service){
+#include "DataStructures.h"
 
-	std::string password;
-	std::string name = "localhost";							//server_address.sin_addr.s_addr;
-	
-	printf("Write your password:\n");
+Ticket* sendTicketRequest(int socket, struct sockaddr_in server_address, std::string serviceName){
+
+	std::string password;	
+	printf("Podaj hasło:\n");
 	std::cin>>password; 
 	printf("\n");
 	
-	std::string all_details = name + password + std::to_string(number_of_service);
+	Request* request =  new Request(true,"",password,serviceName,"");
+	const char* message = request->serialize().c_str();
    
-	char * message = new char[ all_details.size() + 1 ];
-	strcpy( message, all_details.c_str() );
-		
-	if(sendto(socket, message, 1024, 0, (struct sockaddr *) &server_address, sizeof(server_address) ) == -1)
+	if(sendto(socket, message, strlen(message), 0, (struct sockaddr *) &server_address, sizeof(server_address) ) == -1)
       		perror("writing server");
   	else {	
         
@@ -30,12 +28,12 @@ void sendTicketRequest(int socket, struct sockaddr_in server_address, int number
          
 	}
 
-	delete[] message;
 
+	/*
 	char message_from_server[50];
 	int read_result;
 	
-	/*do {
+	do {
 
    		read_result= read(  sock,   &message_from_server, sizeof(message_from_server));
 		printf("%d", read_result);
@@ -47,5 +45,7 @@ void sendTicketRequest(int socket, struct sockaddr_in server_address, int number
 		}
 	}
 	while(read_result!=0);*/
+	
+	return nullptr;
 
 }
