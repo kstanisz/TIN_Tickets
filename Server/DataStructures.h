@@ -1,4 +1,11 @@
 #include<string>
+#include <sys/types.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include"json.hpp"
 
 using json = nlohmann::json;

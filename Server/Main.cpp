@@ -5,7 +5,6 @@
 #include <fstream>
 
 #include <set>
-#include <map>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -152,14 +151,32 @@ void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 		}
 		
 		for(auto fd : clientFDs){
+			
 			if(!FD_ISSET(fd,&fds))
 				continue;
 					
 			char buf[4096];
 			int numBytes = read(fd,buf,sizeof(buf));
 			if(numBytes > 0){
-				std::cout<<"TCP_RECEIVE"<<std::endl;
-				std::cout<<buf<<std::endl;
+				json j;
+				std::string message = buf;
+				try{
+					j = json::parse(message);
+				}catch(std::exception e){
+					//std::cout<<"Error parsing json."<<std::endl;
+				}
+				
+				Request* request;
+				
+				try{
+					request = Request::deserialize(j);
+				}catch(std::exception e){
+					//std::cout<<"Error deserializing json."<<std::endl;
+				}
+				
+				Response * response = runTcpService(request,ticketDao);
+				write(fd, response->getMessage().c_str(), strlen(response->getMessage().c_str()));
+				
 			}else{
 				close(fd);
 				clientFDs.erase(fd);
