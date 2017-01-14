@@ -1,4 +1,4 @@
-#include<iostream>
+#include <iostream>
 #include <cstdlib>
 #include <ctime>
 #include <cstdio>
@@ -16,7 +16,8 @@
 #include <arpa/inet.h>
 
 #include "json.hpp"
-#include"TicketDao.h"
+#include "TicketDao.h"
+#include "DataStructures.h"
 
 using json = nlohmann::json;
 

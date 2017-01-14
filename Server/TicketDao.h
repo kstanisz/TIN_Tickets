@@ -1,9 +1,13 @@
+#ifndef TICKETDAO_H_
+#define TICKETDAO_H_
+
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <mysql.h>
 
 #include "DataStructures.h"
+#include "Crypto.h"
 
 class TicketDao
 {
@@ -21,3 +25,4 @@ class TicketDao
 		Ticket* releaseTicket(std::string ip, std::string password, std::string serviceName);
 };
 
+#endif //TICKETDAO_H_
