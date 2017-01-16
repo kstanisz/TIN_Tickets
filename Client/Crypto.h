@@ -44,6 +44,7 @@ public:
 	int readPrivateKey(std::string filename = "privkey.pem");
 	std::string rsaPublicEncrypt(std::string data);
 	std::string rsaPrivateDecrypt(std::string data);
+	std::string passwordSaltedHash(std::string salt, std::string password) const;
 	
 };
 

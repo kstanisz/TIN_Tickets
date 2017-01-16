@@ -177,3 +177,20 @@ std::string Crypto::rsaPrivateDecrypt(std::string data)
 	
 	return std::string((char*)decrypted, size);
 }
+
+
+std::string Crypto::passwordSaltedHash(std::string salt, std::string password) const
+{
+	const int iterations = 100000;
+	const int hash_length = 32;
+	unsigned char hash[hash_length];
+	if(1 != PKCS5_PBKDF2_HMAC(password.c_str(), password.length(), (unsigned char*) salt.c_str(), salt.length(),
+								iterations, EVP_sha256(), hash_length, hash))
+	{
+		fprintf(stderr, "Crypto::passwordSaltedHash failed.");
+		handleError();
+		return std::string();
+	}
+	
+	return std::string((char*)hash, hash_length);
+}
