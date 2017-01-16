@@ -1,5 +1,11 @@
 #include "Crypto.h"
 
+bool md_sha256_t::operator==(const md_sha256_t &rhs) const
+{
+	return this->toString() == rhs.toString();
+}
+
+
 std::string md_sha256_t::toString() const
 {
 	char buffer[65];

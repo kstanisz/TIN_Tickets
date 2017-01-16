@@ -18,6 +18,7 @@
 #include "json.hpp"
 #include "TicketDao.h"
 #include "DataStructures.h"
+#include "Crypto.h"
 
 using json = nlohmann::json;
 
@@ -29,7 +30,7 @@ Response* runUdpService(Request* request, std::string ip, TicketDao* ticketDao);
 Response* runTcpService(Request* request, std::string ip, TicketDao* ticketDao);
 
 int main(){
-	
+
 	TicketDao* ticketDao = new TicketDao();
 	ticketDao->connect();
 	// Utworzenie socketów i ich adresów oraz bind.
