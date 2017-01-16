@@ -1,7 +1,7 @@
 CC = g++
 CPPFLAGS = -I/usr/include/mysql
 LDLIBS = -lmysqlclient -lcrypto -L/usr/include/mysql 
-
+ 
 TicketsServer: Main.o Crypto.o TicketDao.o DataStructures.o
 	$(CC) -o TicketsServer Main.o Crypto.o TicketDao.o DataStructures.o $(CPPFLAGS) $(LDLIBS)
 Main.o:

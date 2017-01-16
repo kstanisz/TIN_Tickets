@@ -1,4 +1,7 @@
-#include<string>
+#ifndef DATASTRUCTURES_H_
+#define DATASTRUCTURES_H_
+
+#include <string>
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
@@ -6,7 +9,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include"json.hpp"
+#include "json.hpp"
 
 using json = nlohmann::json;
 
@@ -14,12 +17,14 @@ struct Ticket
 {
 	std::string ip;
 	std::string serviceName;
+	
+	std::string serialize() const;
 };
 
-inline bool operator<(const Ticket& ticket1, const Ticket& ticket2)
+/*inline bool operator<(const Ticket& ticket1, const Ticket& ticket2)
 {
 	return ticket1.serviceName < ticket2.serviceName;
-}
+}*/
 
 class Request
 {
@@ -29,61 +34,25 @@ class Request
 		std::string password;
 		std::string serviceName;
 		std::string message;
+		
 	public:
-	
-		Request(bool releaseTicket,std::string ip, std::string password, std::string serviceName, std::string message){
-			this->releaseTicket = releaseTicket;
-			this->ip = ip;
-			this->password = password;
-			this->serviceName = serviceName;
-			this->message = message;
-		}
+		Request(bool releaseTicket,std::string ip, std::string password, std::string serviceName, std::string message);
 		
-		bool isReleaseTicket(){
-			return releaseTicket;
-		}
+		bool isReleaseTicket();
 		
-		void setIp(std::string ip)
-		{
-			this->ip=ip;
-		}
+		void setIp(std::string ip);
 		
-		std::string getIp(){
-			return ip;
-		}
+		std::string getIp();
 		
-		std::string getPassword(){
-			return password;
-		}
+		std::string getPassword();
 		
-		std::string getServiceName(){
-			return serviceName;
-		}
+		std::string getServiceName();
 		
-		std::string getMessage(){
-			return message;
-		}
+		std::string getMessage();
 		
-		std::string serialize(){
-			json j;
-			j["releaseTicket"] = releaseTicket;
-			j["ip"] = ip;
-			j["password"] = password;
-			j["serviceName"] = serviceName;
-			j["message"] = message;
-			
-			return j.dump();
-		} 
+		std::string serialize();
 		
-		static Request* deserialize(json j){
-			bool releaseTicket = j["releaseTicket"];
-			std::string ip = j["ip"];
-			std::string password = j["password"];
-			std::string serviceName = j["serviceName"];
-			std::string message = j["message"];
-			
-			return new Request(releaseTicket,ip,password,serviceName,message);
- 		}
+		static Request* deserialize(json j);
 };
 
 class Response
@@ -92,39 +61,17 @@ class Response
 		std::string message;
 		std::string ip;
 		std::string serviceName;
+		
 	public:
-		Response(std::string message,Ticket* ticket){
-			this->message = message;
-			this->ip = ticket->ip;
-			this->serviceName = ticket->serviceName;
-		}
+		Response(std::string message,Ticket* ticket);
 		
-		std::string getMessage(){
-			return message;
-		}
+		std::string getMessage();
 		
-		Ticket* getTicket(){
-			Ticket* ticket =  new Ticket();
-			ticket->ip = ip;
-			ticket->serviceName = serviceName;
-			return ticket;
-		}
+		Ticket* getTicket();
 		
-		std::string serialize(){
-			json j;
-			j["message"] = message;
-			j["ip"] = ip;
-			j["serviceName"] = serviceName;
-			
-			return j.dump();
-		}
+		std::string serialize();
 		
-		static Response* deserialize(json j){
-			std::string message = j["message"];
-			Ticket ticket = Ticket();
-			ticket.ip = j["ip"];
-			ticket.serviceName = j["serviceName"];
-			
-			return new Response(message,&ticket);
-		}
+		static Response* deserialize(json j);
 };
+
+#endif //DATASTRUCTURES_H_
