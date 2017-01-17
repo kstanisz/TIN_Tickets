@@ -17,13 +17,17 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	std::cin>>echoMsg; 
 	printf("\n");
 	
-	Request* request =  new Request(false,"127.0.0.1","","TCP_ECHO",echoMsg);
-	const char* message = request->serialize().c_str();
+	Request* request =  new Request(false,ticket->ip,ticket->password,ticket->checksum,ticket->expiryDateTimestamp,"TCP_ECHO",echoMsg);
+	std::string serializedRequest = request->serialize();
+	const char* message = serializedRequest.c_str();
 	
-  	if(write(socket, message, strlen(message))==-1)
+  	if(write(socket, message, strlen(message))==-1){
       	perror("writing server");
+		return;
+	}
 
 	char message_from_server[4096];
+	memset(message_from_server, '\0', sizeof message_from_server);
 	int read_result;
 	do {
 
@@ -31,12 +35,31 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	 
 		if(read_result>0)
 		{
-			printf("\nOdpowiedź serwera: %s\n", message_from_server);
-			read_result= 0;
+			json j;
+			std::string message = message_from_server;
+			try{
+				j = json::parse(message);
+			}catch(std::exception e){
+				std::cout<<"Error parsing json."<<std::endl;
+			}
+			
+			Response* response;
+			try{
+				response = Response::deserialize(j);
+			}catch(std::exception e){
+				std::cout<<"Error deserializing json."<<std::endl;
+			}
+			
+			if(response->getMessage() != ""){
+				std::cout<<"\nOdpowiedź serwera: "<<response->getMessage()<<std::endl;
+				return;
+			}else{
+				std::cout<<"\nOdpowiedź serwera: Pusta wiadomość."<<std::endl;
+				return;
+			}
 		}
 	}
 	while(read_result!=0);
-
 }
 
 

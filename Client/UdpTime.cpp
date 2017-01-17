@@ -11,52 +11,53 @@
 #include "DataStructures.h"
 
 void udpTime(int socket, struct sockaddr_in server_address, Ticket* ticket){
-
-	int sock;
-	sock = socket;
 	
-	std::string password;
-	std::string name = "localhost";							//server_address.sin_addr.s_addr;
+	// Utworzenie żądania
+	Request* request =  new Request(false,ticket->ip,ticket->password,ticket->checksum, ticket->expiryDateTimestamp, "UDP_TIME","");
+	std::string serializedRequest = request->serialize();
+	const char* message = serializedRequest.c_str();
 	
-	printf("Write your password:\n");
-	std::cin>>password; 
-	printf("\n");
-
-	std::string number_of_service = "3";
+	std::cout<<"MessageFromClient: "<<message<<std::endl;
 	
-	std::string all_details; 
-    	all_details = name + password + number_of_service;
-    	//cout << "Polaczony tekst to: \"" << all_details << "\"" << endl;
-
-
-	char * message = new char[ all_details.size() + 1 ];
-	strcpy( message, all_details.c_str() );
-		
-	
-	if(sendto(sock, message, 1024, 0, (struct sockaddr *) &server_address, sizeof(server_address) ) == -1)
-      		perror("writing server");
-  	else {	
-        
-          printf("You successfully sent a message.\n");
-         
+	if(sendto(socket, message, strlen(message), 0, (struct sockaddr *) &server_address, sizeof(server_address) ) == -1)	{
+		perror("Writing server");
+		return;
 	}
+      		
 
-	delete[] message;
-
-	/*char message_from_server[50];
+	// Odbiór wiadomości z serwera
+	char message_from_server[4096];
+	memset(message_from_server, '\0', sizeof message_from_server);
 	int read_result;
-	
 	do {
 
-   		read_result= read(  sock,   &message_from_server, sizeof(message_from_server));
-		printf("%d", read_result);
+		read_result= recv(socket,&message_from_server, sizeof(message_from_server),0);
 	 
-	if(read_result>0)
+		if(read_result>0)
 		{
-			printf("to jest info od klienta: %s\n", message_from_server);
-			read_result= 0;
+			json j;
+			std::string message = message_from_server;
+			try{
+				j = json::parse(message);
+			}catch(std::exception e){
+				std::cout<<"Error parsing json."<<std::endl;
+			}
+			
+			Response* response;
+			try{
+				response = Response::deserialize(j);
+			}catch(std::exception e){
+				std::cout<<"Error deserializing json."<<std::endl;
+			}
+			
+			if(response->getMessage() != ""){
+				std::cout<<"\nOdpowiedź serwera: "<<response->getMessage()<<std::endl;
+				return;
+			}else{
+				std::cout<<"\nOdpowiedź serwera: Pusta wiadomość."<<std::endl;
+				return;
+			}
 		}
 	}
-	while(read_result!=0);*/
-
+	while(read_result!=0);
 }

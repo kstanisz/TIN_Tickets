@@ -18,7 +18,6 @@
 #include "json.hpp"
 #include "TicketDao.h"
 #include "DataStructures.h"
-#include "Crypto.h"
 
 using json = nlohmann::json;
 
@@ -33,6 +32,7 @@ int main(){
 
 	TicketDao* ticketDao = new TicketDao();
 	ticketDao->connect();
+	ticketDao->updateTestPassword();
 	// Utworzenie socketów i ich adresów oraz bind.
 	
 	const int udpSocket = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
@@ -142,16 +142,19 @@ void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 void processUdp(int fd, TicketDao* ticketDao)
 {
 	char buf[4096];
+	// Czyszczenie bufora
+	memset(buf, '\0', sizeof buf);
 	sockaddr_in from;
 	socklen_t fromSize = sizeof from;
 	int numBytes = recvfrom(fd,buf,sizeof(buf),0,(sockaddr*) &from, &fromSize);
 
 	json j;
 	std::string message = buf;
+	std::cout<<"Wiadomość od klienta: "<<message<<std::endl;
 	try{
 		j = json::parse(message);
 	}catch(std::exception e){
-		//std::cout<<"Error parsing json."<<std::endl;
+		std::cout<<"Error parsing json."<<std::endl;
 	}
 			
 	Request* request;
@@ -159,7 +162,7 @@ void processUdp(int fd, TicketDao* ticketDao)
 	try{
 		request = Request::deserialize(j);
 	}catch(std::exception e){
-		//std::cout<<"Error deserializing json."<<std::endl;
+		std::cout<<"Error deserializing json."<<std::endl;
 	}
 			
 	std::string ip = inet_ntoa(from.sin_addr);
@@ -167,17 +170,21 @@ void processUdp(int fd, TicketDao* ticketDao)
 	if(request->isReleaseTicket()){
 		request -> setIp(ip);
 		response = releaseTicket(request,ip,ticketDao);
-		std::string message = response->serialize();
-		sendto(fd,message.c_str(),strlen(message.c_str()),0,(sockaddr* ) &from , sizeof from);
 	}else{
 		response = runUdpService(request,ip,ticketDao);
-		sendto(fd,response->getMessage().c_str(),response->getMessage().size(),0,(sockaddr* ) &from , sizeof from);
 	}
+	
+	std::string messageFromServer = response->serialize();
+	std::cout<<"MessageFromServer: "<<messageFromServer<<std::endl;
+	sendto(fd,messageFromServer.c_str(),strlen(messageFromServer.c_str()),0,(sockaddr* ) &from , sizeof from);
 }
 
 void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, TicketDao* ticketDao)
 {
+	std::cout<<"Process tcp"<<std::endl;
 	char buf[4096];
+	// Czyszczenie bufora
+	memset(buf, '\0', sizeof buf);
 	int numBytes = read(fd,buf,sizeof(buf));
 	if(numBytes > 0){
 		json j;
@@ -188,6 +195,7 @@ void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, Ti
 			//std::cout<<"Error parsing json."<<std::endl;
 		}
 		
+		std::cout<<"Wiadomość od klienta: "<<message<<std::endl; 
 		Request* request;
 		
 		try{
@@ -197,7 +205,8 @@ void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, Ti
 		}
 				
 		Response * response = runTcpService(request,ip,ticketDao);
-		write(fd, response->getMessage().c_str(), strlen(response->getMessage().c_str()));
+		std::string messageFromServer = response->serialize();
+		write(fd, messageFromServer.c_str(), strlen(messageFromServer.c_str()));
 				
 		}else{
 			close(fd);
@@ -208,15 +217,23 @@ void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, Ti
 Response* releaseTicket(Request* request, std::string ip, TicketDao* ticketDao)
 {
 	std::cout<<"Serwer wykonuje wydanie biletu"<<std::endl;
-	std::string password = request->getPassword();
+	std::string encryptedPassword = request->getPassword();
+	encryptedPassword = Crypto::instance()->base64_decode(encryptedPassword);
+	std::string decryptedPassword = Crypto::instance()->rsaPrivateDecrypt(encryptedPassword);
 	std::string serviceName = request->getServiceName();
 	
-	if(!ticketDao->checkAccess(ip,password,serviceName)){
+	if(!ticketDao->authenticateUser(ip,decryptedPassword)){
+		Ticket dummy = Ticket();
+		return new Response("Brak użytkownika w bazie lub niepoprawne hasło.",&dummy);
+	}
+
+	if(!ticketDao->checkAccessToService(ip,serviceName)){
 		Ticket dummy = Ticket();
 		return new Response("Brak upoważnienia do wydania biletu na usługę "+serviceName,&dummy);
 	}
 	
-	Ticket* ticket = ticketDao->releaseTicket(ip,request->getPassword(),request->getServiceName());
+	std::string passwordHash = ticketDao->getPasswordHash(ip);
+	Ticket* ticket = ticketDao->releaseTicket(ip,passwordHash,request->getServiceName());
 	
 	return new Response("",ticket);
 }
@@ -234,7 +251,8 @@ Response* runUdpService(Request* request, std::string ip, TicketDao* ticketDao)
 	if(serviceName == "UDP_ECHO"){
 		return new Response(request->getMessage(),&dummy);
 	}else if(serviceName == "UDP_TIME"){
-		return new Response(request->getMessage(),&dummy);
+		std::string message="Czas: ";
+		return new Response(message,&dummy);
 	}else{
 		std::cout<<"Niepoprawna nazwa usługi"<<std::endl;
 	}
