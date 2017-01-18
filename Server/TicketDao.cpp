@@ -170,7 +170,7 @@ Ticket* TicketDao::releaseTicket(std::string ip, std::string serviceName)
 	std::stringstream query;
 	query << "insert into Ticket(user_id,service_id,checksum,expiry_date) "<<
 			"select u.id, s.id,'"<<checksumString<<"',from_unixtime("<<std::to_string(timestamp)<<") "
-			"from user u, service s "<< 
+			"from User u, Service s "<< 
 			"where u.ip='"<<ip<<"' and s.name='"<<serviceName<<"'";
 				
 	if(mysql_query(&mysql,query.str().c_str())){
