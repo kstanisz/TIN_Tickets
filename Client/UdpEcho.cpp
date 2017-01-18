@@ -18,7 +18,7 @@ void udpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	// Wiadomość od użytkownika
 	std::string echoMsg;	
 	printf("Podaj wiadomość:\n");
-	std::cin>>echoMsg; 
+	std::getline(std::cin, echoMsg); 
 	printf("\n");
 	
 	// Utworzenie żądania
