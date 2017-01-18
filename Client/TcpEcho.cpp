@@ -14,7 +14,7 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 
 	std::string echoMsg;	
 	printf("Podaj wiadomość:\n");
-	std::cin>>echoMsg; 
+	std::getline(std::cin, echoMsg);
 	printf("\n");
 	
 	Request* request =  new Request(false,ticket->ip,"",ticket->expiryDateTimestamp,"TCP_ECHO",echoMsg);
