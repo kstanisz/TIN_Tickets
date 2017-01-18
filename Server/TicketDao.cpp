@@ -35,25 +35,8 @@ void TicketDao::updateTestPassword()
 			"SALT='"<<salt<<"' WHERE ID =1";
 
 	if(mysql_query(&mysql,query.str().c_str())){
-		std::cout<<"Dupcia"<<std::endl;
+		std::cout<<"Bład podczas aktualizacji haseł bazy danych!"<<std::endl;
 	}
-}
-
-std::string TicketDao::getPasswordHash(std::string ip)
-{
-	MYSQL_RES* queryId;	
-	std::stringstream query;
-	query << "SELECT PASSWORD_HASH FROM USER U WHERE U.IP='" <<ip<<"'";		
-	mysql_select_db(&mysql,"tickets");
-	mysql_query(&mysql,query.str().c_str());
-	queryId = mysql_store_result(&mysql);
-	
-	MYSQL_ROW result = mysql_fetch_row(queryId);
-	if(result == NULL){
-		return NULL;
-	}
-	
-	return result[0];
 }
 
 bool TicketDao::authenticateUser(std::string ip, std::string password)
@@ -82,7 +65,7 @@ bool TicketDao::checkAccessToService(std::string ip, std::string serviceName)
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT * FROM USER_HAS_SERVICE US " <<
+	query << "SELECT COUNT(*) FROM USER_HAS_SERVICE US " <<
 						"LEFT JOIN USER U ON U.id = US.user_id " <<
 						"LEFT JOIN SERVICE S ON S.id = US.service_id " <<
 						"WHERE U.ip='"<<ip<<"' "<<
@@ -92,14 +75,16 @@ bool TicketDao::checkAccessToService(std::string ip, std::string serviceName)
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
-	return(mysql_fetch_row(queryId) != NULL);
+	MYSQL_ROW result = mysql_fetch_row(queryId);
+	int count = std::stoi(result[0]);
+	return (count > 0);
 }
 
-bool TicketDao::checkTicket(std::string ip, std::string serviceName)
+bool TicketDao::checkUserHasValidTicketToService(std::string ip, std::string serviceName)
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT * FROM TICKET T " <<
+	query << "SELECT COUNT(*) FROM TICKET T " <<
 						"LEFT JOIN USER U ON U.id = T.user_id " <<
 						"LEFT JOIN SERVICE S ON S.id = T.service_id " <<
 						"WHERE U.ip='"<<ip<<"' "<<
@@ -110,16 +95,40 @@ bool TicketDao::checkTicket(std::string ip, std::string serviceName)
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
-	return(mysql_fetch_row(queryId) != NULL);
+	MYSQL_ROW result = mysql_fetch_row(queryId);
+	int count = std::stoi(result[0]);
+	return (count > 0);
 }
 
-Ticket* TicketDao::releaseTicket(std::string ip, std::string passwordHash, std::string serviceName)
+bool TicketDao::checkTicket(Ticket* ticket)
+{
+	md_sha256_t checksum = Crypto::instance()->ticketChecksum(*ticket);
+	std::string checksumString = checksum.toString();
+	
+	MYSQL_RES* queryId;	
+	std::stringstream query;
+	query << "SELECT COUNT(*) FROM TICKET T " <<
+						"LEFT JOIN USER U ON U.id = T.user_id " <<
+						"LEFT JOIN SERVICE S ON S.id = T.service_id " <<
+						"WHERE U.ip='"<<ticket->ip<<"' "<<
+						"AND S.name='"<<ticket->serviceName<<"' "<<
+						"AND T.checksum='"<<checksumString<<"' "<<
+						"AND T.expiry_date > now()";
+						
+	mysql_select_db(&mysql,"tickets");
+	mysql_query(&mysql,query.str().c_str());
+	queryId = mysql_store_result(&mysql);
+	
+	MYSQL_ROW result = mysql_fetch_row(queryId);
+	int count = std::stoi(result[0]);
+	return (count > 0);
+}
+
+Ticket* TicketDao::prolongTicket(std::string ip, std::string serviceName)
 {
 	Ticket* ticket = new Ticket();
 	ticket->ip = ip;
 	ticket->serviceName = serviceName;
-	std::string encryptedPassword = Crypto::instance()->base64_encode(passwordHash);
-	ticket->password = encryptedPassword;
 	
 	long int timestamp = static_cast<long int>(time(NULL));
 	timestamp+=EXPIRY_TIME_SECONDS;
@@ -128,10 +137,34 @@ Ticket* TicketDao::releaseTicket(std::string ip, std::string passwordHash, std::
 
 	md_sha256_t checksum = Crypto::instance()->ticketChecksum(*ticket);
 	std::string checksumString = checksum.toString();
-	//TODO: checksum, expiry_date
+		
+	MYSQL_RES* queryId;	
+	mysql_select_db(&mysql,"tickets");
+	std::stringstream query;
+	query << "UPDATE TICKET SET EXPIRY_DATE = FROM_UNIXTIME("<<std::to_string(timestamp)<<"), CHECKSUM='"<<checksumString<<"' "<<
+			" WHERE USER_ID = (SELECT ID FROM USER WHERE IP = '"<<ip<<"') AND SERVICE_ID = (SELECT ID FROM SERVICE WHERE NAME = '"<<serviceName<<"')"; 
+					
+	if(mysql_query(&mysql,query.str().c_str())){
+		return nullptr;
+	}
 	
-	ticket->checksum = checksumString;
+	return ticket;
+}
+
+Ticket* TicketDao::releaseTicket(std::string ip, std::string serviceName)
+{
+	Ticket* ticket = new Ticket();
+	ticket->ip = ip;
+	ticket->serviceName = serviceName;
 	
+	long int timestamp = static_cast<long int>(time(NULL));
+	timestamp+=EXPIRY_TIME_SECONDS;
+	
+	ticket->expiryDateTimestamp = timestamp;
+
+	md_sha256_t checksum = Crypto::instance()->ticketChecksum(*ticket);
+	std::string checksumString = checksum.toString();
+		
 	MYSQL_RES* queryId;	
 	mysql_select_db(&mysql,"tickets");
 	std::stringstream query;

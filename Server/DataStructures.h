@@ -17,8 +17,6 @@ struct Ticket
 {
 	std::string ip;
 	std::string serviceName;
-	std::string password;
-	std::string checksum;
 	long int expiryDateTimestamp;
 	std::string serialize() const;
 };
@@ -29,13 +27,12 @@ class Request
 		bool releaseTicket;
 		std::string ip;
 		std::string password;
-		std::string checksum;
 		long int expiryDateTimestamp;
 		std::string serviceName;
 		std::string message;
 		
 	public:
-		Request(bool releaseTicket,std::string ip, std::string password, std::string checksum, long int expiryDateTimestamp, std::string serviceName, std::string message);
+		Request(bool releaseTicket,std::string ip, std::string password, long int expiryDateTimestamp, std::string serviceName, std::string message);
 		
 		bool isReleaseTicket();
 		
@@ -44,8 +41,6 @@ class Request
 		std::string getIp();
 		
 		std::string getPassword();
-
-		std::string getChecksum();
 
 		long int getExpiryDateTimestamp();
 		
@@ -63,9 +58,7 @@ class Response
 	private:
 		std::string message;
 		std::string ip;
-		std::string password;
 		std::string serviceName;
-		std::string checksum;
 		long int expiryDateTimestamp;
 		
 	public:

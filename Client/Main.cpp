@@ -119,8 +119,10 @@ int main()
 				break;
 			}
 				
-			default:
-				printf("Niepoprawny wybór!.\n");
+			default:{
+				std::cout<<"Niepoprawny wybór"<<std::endl;
+				break;
+			}
 		}
 		
 		if(x==0){

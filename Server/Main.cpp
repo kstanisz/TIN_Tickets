@@ -31,10 +31,16 @@ Response* runTcpService(Request* request, std::string ip, TicketDao* ticketDao);
 int main(){
 
 	TicketDao* ticketDao = new TicketDao();
-	ticketDao->connect();
-	ticketDao->updateTestPassword();
-	// Utworzenie socketów i ich adresów oraz bind.
 	
+	if(!ticketDao->connect()){
+		std::cout<<"Brak połączenia z bazą danych."<<std::endl;
+		exit(1);
+	}
+	
+	// Aktualizacja haseł w bazie danych.
+	ticketDao->updateTestPassword();
+	
+	// Utworzenie socketów i ich adresów oraz bind.
 	const int udpSocket = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
 	if(udpSocket == -1){
 		perror("Error creating udp socket.");
@@ -69,7 +75,6 @@ int main(){
 	}
 	
 	// Ustawienie socketa TCP na nasłuchiwanie
-	
 	listen(tcpSocket,999);
 	
 	serverLoop(udpSocket,tcpSocket,ticketDao);
@@ -82,18 +87,16 @@ int main(){
 
 void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 	
+	// Mapa z deskryptorami klientów TCP. (fd, sin_addr)
 	std::map <int,std::string> clientFDs;
 	
 	while(1){
 		
-		// zeruj zbiór deskryptorach
 		fd_set fds;
 		FD_ZERO(&fds);
-		// dodanie deskryptorów
 		FD_SET(tcpSocket, &fds);
 		FD_SET(udpSocket, &fds);
 	
-		
 		int max = std::max(udpSocket,tcpSocket);
 		for (auto& kv : clientFDs) {
 			int fd = kv.first;
@@ -103,29 +106,34 @@ void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 		
 		int nfds = select(max+1, &fds, nullptr, nullptr, nullptr);
 		if(nfds == -1){
-			perror("select() error");
+			perror("Select() error");
+			exit(1);
 		}
 			
 		if(nfds == 0){
-			perror("select() timout");
+			perror("Select() timout");
+			exit(1);
 		}
-		
+
+		// TCP, dodajemy deskryptor klienta do mapy
 		if(FD_ISSET(tcpSocket,&fds)){
 			struct sockaddr_in address;
 			socklen_t addressSize = sizeof(address);
 			int newFd = accept(tcpSocket,(sockaddr*) &address,&addressSize);
 			if(newFd == -1){
 				perror("Tcp accept()");
-				continue;
+				exit(1);
 			}
 			
 			clientFDs[newFd] = inet_ntoa(address.sin_addr);
 		}
 		
+		// UDP - PRZETWARZANIE
 		if(FD_ISSET(udpSocket,&fds)){
 			processUdp(udpSocket,ticketDao);
 		}
 		
+		// TCP - PRZETWARZANIE
 		for(auto& kv : clientFDs){
 			
 			int fd = kv.first;
@@ -150,11 +158,14 @@ void processUdp(int fd, TicketDao* ticketDao)
 
 	json j;
 	std::string message = buf;
-	std::cout<<"Wiadomość od klienta: "<<message<<std::endl;
+	
 	try{
 		j = json::parse(message);
 	}catch(std::exception e){
-		std::cout<<"Error parsing json."<<std::endl;
+		std::string messageFromServer = "Błąd podczas parsowania wiadomości klienta!";
+		std::cout<<messageFromServer<<std::endl;
+		sendto(fd,messageFromServer.c_str(),strlen(messageFromServer.c_str()),0,(sockaddr* ) &from , sizeof from);
+		return;
 	}
 			
 	Request* request;
@@ -162,7 +173,10 @@ void processUdp(int fd, TicketDao* ticketDao)
 	try{
 		request = Request::deserialize(j);
 	}catch(std::exception e){
-		std::cout<<"Error deserializing json."<<std::endl;
+		std::string messageFromServer = "Błąd podczas deserializacji wiadomości klienta!";
+		std::cout<<messageFromServer<<std::endl;
+		sendto(fd,messageFromServer.c_str(),strlen(messageFromServer.c_str()),0,(sockaddr* ) &from , sizeof from);
+		return;
 	}
 			
 	std::string ip = inet_ntoa(from.sin_addr);
@@ -175,13 +189,11 @@ void processUdp(int fd, TicketDao* ticketDao)
 	}
 	
 	std::string messageFromServer = response->serialize();
-	std::cout<<"MessageFromServer: "<<messageFromServer<<std::endl;
 	sendto(fd,messageFromServer.c_str(),strlen(messageFromServer.c_str()),0,(sockaddr* ) &from , sizeof from);
 }
 
 void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, TicketDao* ticketDao)
 {
-	std::cout<<"Process tcp"<<std::endl;
 	char buf[4096];
 	// Czyszczenie bufora
 	memset(buf, '\0', sizeof buf);
@@ -192,16 +204,21 @@ void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, Ti
 		try{
 			j = json::parse(message);
 		}catch(std::exception e){
-			//std::cout<<"Error parsing json."<<std::endl;
+			std::string messageFromServer = "Błąd podczas parsowania wiadomości klienta";
+			std::cout<<messageFromServer<<std::endl;
+			write(fd, messageFromServer.c_str(), strlen(messageFromServer.c_str()));
+			return;
 		}
 		
-		std::cout<<"Wiadomość od klienta: "<<message<<std::endl; 
 		Request* request;
 		
 		try{
 			request = Request::deserialize(j);
 		}catch(std::exception e){
-			//std::cout<<"Error deserializing json."<<std::endl;
+			std::string messageFromServer = "Błąd podczas deserializacji wiadomości klienta";
+			std::cout<<messageFromServer<<std::endl;
+			write(fd, messageFromServer.c_str(), strlen(messageFromServer.c_str()));
+			return;
 		}
 				
 		Response * response = runTcpService(request,ip,ticketDao);
@@ -216,25 +233,30 @@ void processTcp(int fd, std::string ip, std::map<int,std::string>* clientFDs, Ti
 
 Response* releaseTicket(Request* request, std::string ip, TicketDao* ticketDao)
 {
-	std::cout<<"Serwer wykonuje wydanie biletu"<<std::endl;
+	std::cout<<"Serwer wykonuje wydanie biletu."<<std::endl;
 	std::string encryptedPassword = request->getPassword();
 	encryptedPassword = Crypto::instance()->base64_decode(encryptedPassword);
 	std::string decryptedPassword = Crypto::instance()->rsaPrivateDecrypt(encryptedPassword);
 	std::string serviceName = request->getServiceName();
 	
+	Ticket dummy = Ticket();
+		
 	if(!ticketDao->authenticateUser(ip,decryptedPassword)){
-		Ticket dummy = Ticket();
 		return new Response("Brak użytkownika w bazie lub niepoprawne hasło.",&dummy);
 	}
 
 	if(!ticketDao->checkAccessToService(ip,serviceName)){
-		Ticket dummy = Ticket();
 		return new Response("Brak upoważnienia do wydania biletu na usługę "+serviceName,&dummy);
 	}
 	
-	std::string passwordHash = ticketDao->getPasswordHash(ip);
-	Ticket* ticket = ticketDao->releaseTicket(ip,passwordHash,request->getServiceName());
-	
+	Ticket* ticket;
+	if(ticketDao->checkUserHasValidTicketToService(ip,serviceName)){
+		ticket = ticketDao->prolongTicket(ip,request->getServiceName());
+		std::cout<<"Serwer przedłużył bilet."<<std::endl;
+	}else{
+		ticket = ticketDao->releaseTicket(ip,request->getServiceName());
+		std::cout<<"Serwer wydał bilet."<<std::endl;
+	}
 	return new Response("",ticket);
 }
 
@@ -242,19 +264,27 @@ Response* runUdpService(Request* request, std::string ip, TicketDao* ticketDao)
 {
 	std::string serviceName = request->getServiceName();
 	std::cout<<"Serwer wykonuje usługę: "+serviceName<<std::endl;
-	Ticket dummy = Ticket();
-	bool ticketValid = ticketDao->checkTicket(request->getIp(),request->getServiceName());
-	if(!ticketValid){
-		return new Response("Bilet nieważny!",&dummy);
+	
+	Ticket ticket = Ticket();
+	ticket.ip = request->getIp();
+	ticket.serviceName = request->getServiceName();
+	ticket.expiryDateTimestamp = request->getExpiryDateTimestamp();
+	
+	if(ticket.ip != ip){
+		return new Response("Adres IP nadawcy niezgodny z adresen IP biletu!",&ticket);
+	}
+	
+	if(!ticketDao->checkTicket(&ticket)){
+		return new Response("Bilet niepoprawny lub nieważny!",&ticket);
 	}
 	
 	if(serviceName == "UDP_ECHO"){
-		return new Response(request->getMessage(),&dummy);
+		return new Response(request->getMessage(),&ticket);
 	}else if(serviceName == "UDP_TIME"){
 		std::string message="Czas: ";
-		return new Response(message,&dummy);
+		return new Response(message,&ticket);
 	}else{
-		std::cout<<"Niepoprawna nazwa usługi"<<std::endl;
+		return new Response("Niepoprawna nazwa usługi!",&ticket);
 	}
 }
 
@@ -262,17 +292,23 @@ Response* runTcpService(Request* request, std::string ip, TicketDao* ticketDao)
 {
 	std::string serviceName = request->getServiceName();
 	std::cout<<"Serwer wykonuje usługę: "+serviceName<<std::endl;
-	Ticket dummy = Ticket();
 	
-	bool ticketValid = ticketDao->checkTicket(request->getIp(),request->getServiceName());
-	if(!ticketValid){
-		return new Response("Bilet nieważny!",&dummy);
+	Ticket ticket = Ticket();
+	ticket.ip = request->getIp();
+	ticket.serviceName = request->getServiceName();
+	ticket.expiryDateTimestamp = request->getExpiryDateTimestamp();
+	
+	if(ticket.ip != ip){
+		return new Response("Adres IP nadawcy niezgodny z adresen IP biletu!",&ticket);
 	}
 	
+	if(!ticketDao->checkTicket(&ticket)){
+		return new Response("Bilet niepoprawny lub nieważny!",&ticket);
+	}
 	
 	if(serviceName == "TCP_ECHO"){
-		return new Response(request->getMessage(),&dummy);
+		return new Response(request->getMessage(),&ticket);
 	}else{
-		std::cout<<"Niepoprawna nazwa usługi"<<std::endl;
+		return new Response("Niepoprawna nazwa usługi!",&ticket);
 	}
 }

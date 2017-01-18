@@ -4,18 +4,15 @@ std::string Ticket::serialize() const {
 	json j;
 	j["ip"] = ip;
 	j["serviceName"] = serviceName;
-	j["password"] = password;
-	j["checksum"] =  checksum;
 	j["expiryDateTimestamp"] = expiryDateTimestamp;
 
 	return j.dump();
 } 
 
-Request::Request(bool releaseTicket,std::string ip, std::string password, std::string checksum, long int expiryDateTimestamp, std::string serviceName, std::string message){
+Request::Request(bool releaseTicket,std::string ip, std::string password, long int expiryDateTimestamp, std::string serviceName, std::string message){
 	this->releaseTicket = releaseTicket;
 	this->ip = ip;
 	this->password = password;
-	this->checksum = checksum;
 	this->expiryDateTimestamp = expiryDateTimestamp;
 	this->serviceName = serviceName;
 	this->message = message;
@@ -37,10 +34,6 @@ std::string Request::getPassword(){
 	return password;
 }
 
-std::string Request::getChecksum(){
-	return checksum;
-}
-
 long int Request::getExpiryDateTimestamp(){
 	return expiryDateTimestamp;
 }
@@ -58,7 +51,6 @@ std::string Request::serialize(){
 	j["releaseTicket"] = releaseTicket;
 	j["ip"] = ip;
 	j["password"] = password;
-	j["checksum"] = checksum;
 	j["expiryDateTimestamp"] = expiryDateTimestamp;
 	j["serviceName"] = serviceName;
 	j["message"] = message;
@@ -70,19 +62,16 @@ Request* Request::deserialize(json j){
 	bool releaseTicket = j["releaseTicket"];
 	std::string ip = j["ip"];
 	std::string password = j["password"];
-	std::string checksum = j["checksum"];
 	long int expiryDateTimestamp = j["expiryDateTimestamp"];
 	std::string serviceName = j["serviceName"];
 	std::string message = j["message"];
 	
-	return new Request(releaseTicket,ip,password,checksum,expiryDateTimestamp,serviceName,message);
+	return new Request(releaseTicket,ip,password,expiryDateTimestamp,serviceName,message);
 }
 
 Response::Response(std::string message,Ticket* ticket){
 	this->message = message;
 	this->ip = ticket->ip;
-	this->password = ticket->password;
-	this->checksum = ticket->checksum;
 	this->expiryDateTimestamp = ticket->expiryDateTimestamp;
 	this->serviceName = ticket->serviceName;
 }
@@ -94,8 +83,6 @@ std::string Response::getMessage(){
 Ticket* Response::getTicket(){
 	Ticket* ticket =  new Ticket();
 	ticket->ip = ip;
-	ticket->password = password;
-	ticket->checksum = checksum;
 	ticket->expiryDateTimestamp = expiryDateTimestamp;
 	ticket->serviceName = serviceName;
 	return ticket;
@@ -105,8 +92,6 @@ std::string Response::serialize(){
 	json j;
 	j["message"] = message;
 	j["ip"] = ip;
-	j["password"] = password;
-	j["checksum"] = checksum;
 	j["expiryDateTimestamp"] = expiryDateTimestamp;
 	j["serviceName"] = serviceName;
 	
@@ -117,8 +102,6 @@ Response* Response::deserialize(json j){
 	std::string message = j["message"];
 	Ticket ticket = Ticket();
 	ticket.ip = j["ip"];
-	ticket.password = j["password"];
-	ticket.checksum = j["checksum"];
 	ticket.expiryDateTimestamp = j["expiryDateTimestamp"];
 	ticket.serviceName = j["serviceName"];
 	

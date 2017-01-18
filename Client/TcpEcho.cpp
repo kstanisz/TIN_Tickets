@@ -17,7 +17,7 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 	std::cin>>echoMsg; 
 	printf("\n");
 	
-	Request* request =  new Request(false,ticket->ip,ticket->password,ticket->checksum,ticket->expiryDateTimestamp,"TCP_ECHO",echoMsg);
+	Request* request =  new Request(false,ticket->ip,"",ticket->expiryDateTimestamp,"TCP_ECHO",echoMsg);
 	std::string serializedRequest = request->serialize();
 	const char* message = serializedRequest.c_str();
 	
@@ -40,14 +40,16 @@ void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 			try{
 				j = json::parse(message);
 			}catch(std::exception e){
-				std::cout<<"Error parsing json."<<std::endl;
+				std::cout<<"Błąd podczas parsowania wiadomości od serwera"<<std::endl;
+				return;
 			}
 			
 			Response* response;
 			try{
 				response = Response::deserialize(j);
 			}catch(std::exception e){
-				std::cout<<"Error deserializing json."<<std::endl;
+				std::cout<<"Błąd podczas deserializacji wiadomości od serwera"<<std::endl;
+				return;
 			}
 			
 			if(response->getMessage() != ""){

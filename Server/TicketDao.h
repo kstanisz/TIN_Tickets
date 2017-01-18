@@ -25,10 +25,11 @@ class TicketDao
 		
 		void updateTestPassword();
 		bool authenticateUser(std::string ip, std::string password);
-		std::string getPasswordHash(std::string ip);
 		bool checkAccessToService(std::string ip, std::string serviceName);
-		bool checkTicket(std::string ip, std::string serviceName);
-		Ticket* releaseTicket(std::string ip, std::string passwordHash, std::string serviceName);
+		bool checkUserHasValidTicketToService(std::string ip, std::string serviceName); 
+		bool checkTicket(Ticket* ticket);
+		Ticket* prolongTicket(std::string ip, std::string serviceName);
+		Ticket* releaseTicket(std::string ip, std::string serviceName);
 };
 
 #endif //TICKETDAO_H_

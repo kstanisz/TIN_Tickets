@@ -23,7 +23,7 @@ Ticket* sendTicketRequest(int socket, struct sockaddr_in server_address, std::st
 	encryptedPassword = Crypto::instance()->base64_encode(encryptedPassword);
 		
 	// Tworzenie żądania
-	Request* request =  new Request(true,"",encryptedPassword, "", 0 , serviceName , "");
+	Request* request =  new Request(true,"",encryptedPassword, 0 , serviceName , "");
 	std::string serializeRequest = request->serialize();
 	const char* message = serializeRequest.c_str();
 	   
@@ -48,14 +48,16 @@ Ticket* sendTicketRequest(int socket, struct sockaddr_in server_address, std::st
 			try{
 				j = json::parse(message);
 			}catch(std::exception e){
-				std::cout<<"Error parsing json."<<std::endl;
+				std::cout<<"Błąd podczas parsowania wiadomości od serwera"<<std::endl;
+				return nullptr;
 			}
 			
 			Response* response;
 			try{
 				response = Response::deserialize(j);
 			}catch(std::exception e){
-				std::cout<<"Error deserializing json."<<std::endl;
+				std::cout<<"Błąd podczas deserializacji wiadomości od serwera"<<std::endl;
+				return nullptr;
 			}
 			
 			if(response->getMessage() != ""){
@@ -67,7 +69,6 @@ Ticket* sendTicketRequest(int socket, struct sockaddr_in server_address, std::st
 			std::cout<<"\nSerwer wydał bilet:"<<std::endl;
 			std::cout<<"Ip: "<<ticket->ip<<std::endl;
 			std::cout<<"Service name: "<<ticket->serviceName<<std::endl;
-			std::cout<<"Password: "<<ticket->password<<std::endl;
 			read_result= 0;
 			
 			return ticket;
