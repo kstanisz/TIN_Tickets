@@ -31,8 +31,8 @@ void TicketDao::updateTestPassword()
 	MYSQL_RES* queryId;	
 	mysql_select_db(&mysql,"tickets");
 	std::stringstream query;
-	query << "UPDATE USER SET PASSWORD_HASH='"<<passwordHash<<"', "<<
-			"SALT='"<<salt<<"' WHERE ID =1";
+	query << "update User set password_hash='"<<passwordHash<<"', "<<
+			"salt='"<<salt<<"' where id =1";
 
 	if(mysql_query(&mysql,query.str().c_str())){
 		std::cout<<"Bład podczas aktualizacji haseł bazy danych!"<<std::endl;
@@ -43,7 +43,7 @@ bool TicketDao::authenticateUser(std::string ip, std::string password)
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT PASSWORD_HASH, SALT FROM USER U WHERE U.IP='" <<ip<<"'";		
+	query << "select password_hash, salt from User u where u.ip='" <<ip<<"'";		
 	mysql_select_db(&mysql,"tickets");
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
@@ -65,11 +65,11 @@ bool TicketDao::checkAccessToService(std::string ip, std::string serviceName)
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT COUNT(*) FROM USER_HAS_SERVICE US " <<
-						"LEFT JOIN USER U ON U.id = US.user_id " <<
-						"LEFT JOIN SERVICE S ON S.id = US.service_id " <<
-						"WHERE U.ip='"<<ip<<"' "<<
-						"AND S.name='"<<serviceName<<"'";
+	query << "select count(*) from User_Has_Service us " <<
+						"left join User u on u.id = us.user_id " <<
+						"left join Service s on s.id = us.service_id " <<
+						"where u.ip='"<<ip<<"' "<<
+						"and s.name='"<<serviceName<<"'";
 						
 	mysql_select_db(&mysql,"tickets");
 	mysql_query(&mysql,query.str().c_str());
@@ -84,12 +84,12 @@ bool TicketDao::checkUserHasValidTicketToService(std::string ip, std::string ser
 {
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT COUNT(*) FROM TICKET T " <<
-						"LEFT JOIN USER U ON U.id = T.user_id " <<
-						"LEFT JOIN SERVICE S ON S.id = T.service_id " <<
-						"WHERE U.ip='"<<ip<<"' "<<
-						"AND S.name='"<<serviceName<<"' "<<
-						"AND T.expiry_date > now()";
+	query << "select count(*) from Ticket t " <<
+						"left join User u on u.id = t.user_id " <<
+						"left join Service s on s.id = t.service_id " <<
+						"where u.ip='"<<ip<<"' "<<
+						"and s.name='"<<serviceName<<"' "<<
+						"and t.expiry_date > now()";
 						
 	mysql_select_db(&mysql,"tickets");
 	mysql_query(&mysql,query.str().c_str());
@@ -107,13 +107,13 @@ bool TicketDao::checkTicket(Ticket* ticket)
 	
 	MYSQL_RES* queryId;	
 	std::stringstream query;
-	query << "SELECT COUNT(*) FROM TICKET T " <<
-						"LEFT JOIN USER U ON U.id = T.user_id " <<
-						"LEFT JOIN SERVICE S ON S.id = T.service_id " <<
-						"WHERE U.ip='"<<ticket->ip<<"' "<<
-						"AND S.name='"<<ticket->serviceName<<"' "<<
-						"AND T.checksum='"<<checksumString<<"' "<<
-						"AND T.expiry_date > now()";
+	query << "select count(*) from Ticket t " <<
+						"left join User u on u.id = t.user_id " <<
+						"left join Service s on s.id = t.service_id " <<
+						"where u.ip='"<<ticket->ip<<"' "<<
+						"and s.name='"<<ticket->serviceName<<"' "<<
+						"and t.checksum='"<<checksumString<<"' "<<
+						"and t.expiry_date > now()";
 						
 	mysql_select_db(&mysql,"tickets");
 	mysql_query(&mysql,query.str().c_str());
@@ -141,8 +141,8 @@ Ticket* TicketDao::prolongTicket(std::string ip, std::string serviceName)
 	MYSQL_RES* queryId;	
 	mysql_select_db(&mysql,"tickets");
 	std::stringstream query;
-	query << "UPDATE TICKET SET EXPIRY_DATE = FROM_UNIXTIME("<<std::to_string(timestamp)<<"), CHECKSUM='"<<checksumString<<"' "<<
-			" WHERE USER_ID = (SELECT ID FROM USER WHERE IP = '"<<ip<<"') AND SERVICE_ID = (SELECT ID FROM SERVICE WHERE NAME = '"<<serviceName<<"')"; 
+	query << "update Ticket set expiry_date = from_unixtime("<<std::to_string(timestamp)<<"), checksum='"<<checksumString<<"' "<<
+			" where user_id = (select id from User where ip = '"<<ip<<"') and service_id = (select id from Service where name = '"<<serviceName<<"')"; 
 					
 	if(mysql_query(&mysql,query.str().c_str())){
 		return nullptr;
@@ -168,10 +168,10 @@ Ticket* TicketDao::releaseTicket(std::string ip, std::string serviceName)
 	MYSQL_RES* queryId;	
 	mysql_select_db(&mysql,"tickets");
 	std::stringstream query;
-	query << "INSERT INTO TICKET(USER_ID,SERVICE_ID,CHECKSUM,EXPIRY_DATE) "<<
-			"SELECT U.ID, S.ID,'"<<checksumString<<"',FROM_UNIXTIME("<<std::to_string(timestamp)<<") "
-			"FROM USER U, SERVICE S "<< 
-			"WHERE U.IP='"<<ip<<"' AND S.NAME='"<<serviceName<<"'";
+	query << "insert into Ticket(user_id,service_id,checksum,expiry_date) "<<
+			"select u.id, s.id,'"<<checksumString<<"',from_unixtime("<<std::to_string(timestamp)<<") "
+			"from user u, service s "<< 
+			"where u.ip='"<<ip<<"' and s.name='"<<serviceName<<"'";
 				
 	if(mysql_query(&mysql,query.str().c_str())){
 		return nullptr;
