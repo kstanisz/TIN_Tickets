@@ -282,6 +282,14 @@ Response* runUdpService(Request* request, std::string ip, TicketDao* ticketDao)
 		return new Response(request->getMessage(),&ticket);
 	}else if(serviceName == "UDP_TIME"){
 		std::string message="Czas: ";
+		time_t rawtime;
+  		struct tm * timeinfo;
+  		char buffer[80];
+  		time (&rawtime);
+  		timeinfo = localtime(&rawtime);
+  		strftime(buffer,80,"%d-%m-%Y %H:%M:%S",timeinfo);
+  		std::string str(buffer);
+		message += str;
 		return new Response(message,&ticket);
 	}else{
 		return new Response("Niepoprawna nazwa usługi!",&ticket);
