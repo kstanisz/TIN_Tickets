@@ -13,6 +13,8 @@
 void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 
 	std::string echoMsg;
+	std::cin.clear();
+	std::cin.ignore();
 	printf("Podaj wiadomość:\n");
 	std::getline(std::cin, echoMsg);
 	printf("\n");
