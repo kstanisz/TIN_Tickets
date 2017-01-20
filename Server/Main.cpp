@@ -82,6 +82,9 @@ int main(){
 	ticketDao->disconnect();
 	delete ticketDao;
 	
+	close(udpSocket);
+	close(tcpSocket);
+	
 	return 0;
 }
 
