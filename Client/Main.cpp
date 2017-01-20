@@ -82,8 +82,14 @@ int main(int argc, char* argv[])
 	while(1){
 		int x;
 		printf("\n");
-		scanf("%d", &x);
-	
+		int wynikScanfa = scanf("%d", &x);
+		while ( wynikScanfa != 1) {
+			printf("Podaj poprawne dane!\n");
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			wynikScanfa = scanf("%d", &x);	 
+		}
+		
 		switch(x){
 			case 0:{
 				printf("Koniec działania programu\n");
