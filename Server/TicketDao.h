@@ -16,7 +16,7 @@ class TicketDao
 {
 	private:
 		MYSQL mysql;
-		const string DATABASE_NAME; 
+		const std::string DATABASE_NAME; 
 	public:
 		TicketDao();
 		~TicketDao();
