@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	// USER INTERFACE
 	int connection = connect(tcp_sock, (struct sockaddr*) &tcp_echo_server_address, sizeof(tcp_echo_server_address));
     if(connection ==-1){
-      	perror("Connect server error");
+      	perror("Błąd połączenia z serwerem.\n");
       	exit(1);
     };
 	
