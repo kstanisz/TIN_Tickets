@@ -1,6 +1,6 @@
 #include "TicketDao.h"
 
-TicketDao::TicketDao()
+TicketDao::TicketDao() : DATABASE_NAME("tickets")
 {
 	
 }
@@ -15,7 +15,7 @@ bool TicketDao::connect()
 	mysql_init(&mysql);
 
 	// host, user, password, schema
-	return mysql_real_connect(&mysql, "127.0.0.1", "dev", "password", "tickets", 0, NULL, 0);	
+	return mysql_real_connect(&mysql, "127.0.0.1", "dev", "password", DATABASE_NAME, 0, NULL, 0);	
 }
 
 void TicketDao::disconnect()
@@ -29,7 +29,7 @@ void TicketDao::updateTestPassword()
 	std::string salt = "2gcmCA0QhhUqkBUJTnQaAsu1kVyBHoUy4hIvh8nHrJY=";
 	std::string passwordHash = Crypto::instance()->passwordSaltedHash(salt,password);
 	MYSQL_RES* queryId;	
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	std::stringstream query;
 	query << "update User set password_hash='"<<passwordHash<<"', "<<
 			"salt='"<<salt<<"' where id =1";
@@ -44,7 +44,7 @@ bool TicketDao::authenticateUser(std::string ip, std::string password)
 	MYSQL_RES* queryId;	
 	std::stringstream query;
 	query << "select password_hash, salt from User u where u.ip='" <<ip<<"'";		
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
@@ -71,7 +71,7 @@ bool TicketDao::checkAccessToService(std::string ip, std::string serviceName)
 						"where u.ip='"<<ip<<"' "<<
 						"and s.name='"<<serviceName<<"'";
 						
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
@@ -91,7 +91,7 @@ bool TicketDao::checkUserHasValidTicketToService(std::string ip, std::string ser
 						"and s.name='"<<serviceName<<"' "<<
 						"and t.expiry_date > now()";
 						
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
@@ -115,7 +115,7 @@ bool TicketDao::checkTicket(Ticket* ticket)
 						"and t.checksum='"<<checksumString<<"' "<<
 						"and t.expiry_date > now()";
 						
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	mysql_query(&mysql,query.str().c_str());
 	queryId = mysql_store_result(&mysql);
 	
@@ -139,7 +139,7 @@ Ticket* TicketDao::prolongTicket(std::string ip, std::string serviceName)
 	std::string checksumString = checksum.toString();
 		
 	MYSQL_RES* queryId;	
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	std::stringstream query;
 	query << "update Ticket set expiry_date = from_unixtime("<<std::to_string(timestamp)<<"), checksum='"<<checksumString<<"' "<<
 			" where user_id = (select id from User where ip = '"<<ip<<"') and service_id = (select id from Service where name = '"<<serviceName<<"')"; 
@@ -166,7 +166,7 @@ Ticket* TicketDao::releaseTicket(std::string ip, std::string serviceName)
 	std::string checksumString = checksum.toString();
 		
 	MYSQL_RES* queryId;	
-	mysql_select_db(&mysql,"tickets");
+	mysql_select_db(&mysql,DATABASE_NAME);
 	std::stringstream query;
 	query << "insert into Ticket(user_id,service_id,checksum,expiry_date) "<<
 			"select u.id, s.id,'"<<checksumString<<"',from_unixtime("<<std::to_string(timestamp)<<") "
