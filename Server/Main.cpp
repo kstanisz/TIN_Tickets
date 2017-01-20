@@ -43,7 +43,7 @@ int main(){
 	// Utworzenie socketów i ich adresów oraz bind.
 	const int udpSocket = socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
 	if(udpSocket == -1){
-		perror("Error creating udp socket.");
+		perror("Błąd utworzenia gniazda udp.");
 		exit(1);
 	}
 	
@@ -53,13 +53,13 @@ int main(){
 	udp_address.sin_port = htons(9001);
 	
 	if(bind(udpSocket, (const struct sockaddr *) & udp_address, sizeof(udp_address)) == -1){
-		perror("Error binding udp socket.");
+		perror("Błąd wiązania (bind) gniazda udp.");
 		exit(1);
 	}
 	
 	const int tcpSocket = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 	if(tcpSocket == -1){
-		perror("Error creating tcp socket.");
+		perror("Błąd utworzenia gniazda tcp.");
 		exit(1);
 	}
 			
@@ -70,7 +70,7 @@ int main(){
 	
 		
 	if(bind(tcpSocket, (const struct sockaddr *) & tcp_address, sizeof(tcp_address)) == -1){
-		perror("Error binding tcp socket.");
+		perror("Błąd wiązania (bind) gniazda tcp.");
 		exit(1);
 	}
 	
@@ -109,12 +109,12 @@ void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 		
 		int nfds = select(max+1, &fds, nullptr, nullptr, nullptr);
 		if(nfds == -1){
-			perror("Select() error");
+			perror("Select() - błąd");
 			exit(1);
 		}
 			
 		if(nfds == 0){
-			perror("Select() timout");
+			perror("Select() - przekroczenie czasu");
 			exit(1);
 		}
 
@@ -124,7 +124,7 @@ void serverLoop(int udpSocket, int tcpSocket, TicketDao* ticketDao){
 			socklen_t addressSize = sizeof(address);
 			int newFd = accept(tcpSocket,(sockaddr*) &address,&addressSize);
 			if(newFd == -1){
-				perror("Tcp accept()");
+				perror("Błąd z Tcp accept()");
 				exit(1);
 			}
 			
