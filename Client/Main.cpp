@@ -32,8 +32,14 @@ void addTicket(Ticket* ticket, std::vector<Ticket>* tickets);
 Ticket* getTicket(std::vector<Ticket>* tickets, std::string serviceName);
 
 
-int main()
-{
+int main(int argc, char* argv[])
+{	
+	if(argc < 2){
+		std::cout<<"Poprawne wywołanie: ./TicketsClient [server_ip]"<<std::endl;
+		exit(1);
+	}
+	
+	char* serverIp = argv[1];
 
 	// UTWORZENIE SOCKETÓW
 
@@ -53,13 +59,13 @@ int main()
 	
 	struct sockaddr_in udp_server_address;
 	udp_server_address.sin_family = AF_INET;
-	udp_server_address.sin_addr.s_addr = INADDR_ANY;
+	udp_server_address.sin_addr.s_addr = inet_addr(serverIp);
 	udp_server_address.sin_port = htons(9001);
 	
 		
 	struct sockaddr_in tcp_echo_server_address;
 	tcp_echo_server_address.sin_family = AF_INET;
-	tcp_echo_server_address.sin_addr.s_addr = INADDR_ANY;
+	tcp_echo_server_address.sin_addr.s_addr = inet_addr(serverIp);
 	tcp_echo_server_address.sin_port = htons(9002);
 
 	// USER INTERFACE
