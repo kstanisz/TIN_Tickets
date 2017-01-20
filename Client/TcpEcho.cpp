@@ -12,7 +12,9 @@
 #include "DataStructures.h"
 void tcpEcho(int socket, struct sockaddr_in server_address, Ticket* ticket){
 
-	std::string echoMsg;	
+	std::string echoMsg;
+	char c;
+	std::cin.get(c);
 	printf("Podaj wiadomość:\n");
 	std::getline(std::cin, echoMsg);
 	printf("\n");
